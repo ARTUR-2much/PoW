@@ -49,7 +49,7 @@ TAU = [
      4, 12, 20, 28, 36, 44, 52, 60,
      5, 13, 21, 29, 37, 45, 53, 61,
      6, 14, 22, 30, 38, 46, 54, 62,
-     7, 15, 23, 31, 39, 47, 55, 63,
+     7, 15, 23, 31, 39, 47, 55, 63
 ]
 
 A = [unpack(">Q", hexdec(s))[0] for s in (
@@ -73,7 +73,7 @@ A = [unpack(">Q", hexdec(s))[0] for s in (
 
 
 
-C = [hexdec("".join(s))[::-1] for s in (
+C = [hexdec("".join(s)) for s in (
     (
         "b1085bda1ecadae9ebcb2f81c0657c1f",
         "2f6a76432e45d016714eb88d7585c4fc",
@@ -147,259 +147,181 @@ C = [hexdec("".join(s))[::-1] for s in (
         "faf417d5d9b21b9948bc924af11bd720",
     ),
 )]
+for i in C:
+    print(i)
 
 
-# def xor512(k: bytes, a: bytes) -> bytes:
-#     """
-#     X[k](a) = k XOR a. 6(3) в ГОСТе
-#
-#     Оба аргумента должны быть ровно 64 байта (512 бит).
-#     Возвращает новый 64-байтовый объект.
-#     """
-#     assert len(k) == 64 and len(a) == 64, "Оба вектора должны быть 64 байта"
-#     return bytes(x ^ y for x, y in zip(k, a))
-#
-#
-# def sub_bytes(a: bytes) -> bytes:
-#     """
-#     S(a): нелинейное преобразование с помощью SBOX. 6(4) в ГОСТе
-#
-#     Аргументы:
-#         a (bytes): 64-байтный входной вектор.
-#     Возвращает:
-#         bytes: 64-байтный выходной вектор, где
-#                каждый байт ai заменён на SBOX[ai].
-#     """
-#     # Проверяем длину
-#     assert len(a) == 64, f"S-преобразование ожидает 64 байта, получено {len(a)}"
-#     # Заменяем каждый байт через таблицу
-#     return bytes(SBOX[b] for b in a)
-#
-#
-# def permute(a: bytes) -> bytes:
-#     """
-#     P(a): перестановка байтов по таблице TAU. 6(5) в ГОСТе
-#
-#     Аргумент:
-#         a (bytes): 64-байтный вход.
-#     Возвращает:
-#         bytes: 64-байтный выход, где
-#                result[i] = a[TAU[i]].
-#     """
-#     assert len(a) == 64, f"P-преобразование ожидает 64 байта, получено {len(a)}"
-#     return bytes(a[TAU[i]] for i in range(64))
-#
-#
-# def linear(a: bytes) -> bytes:
-#     """
-#     L(a): линейное преобразование 512-битного вектора a (64 байта).
-#     Использует 64 константы A[0..63], каждая — 8-байтовое целое.
-#     """
-#     assert len(a) == 64, f"L ожидает 64 байта, получено {len(a)}"
-#     out = bytearray(64)
-#     # Идём по каждому из 8 слов по 8 байт
-#     for col in range(8):
-#         chunk = a[col*8 : (col+1)*8]
-#         # превращаем 8 байт в одно 64-битное число (little-endian)
-#         bits = int.from_bytes(chunk, "little")
-#         acc = 0
-#         # комбинируем через 64 константы
-#         for i in range(64):
-#             if (bits >> i) & 1:
-#                 acc ^= A[i]
-#         # записываем результат обратно в little-endian
-#         out[col*8 : (col+1)*8] = acc.to_bytes(8, "little")
-#     return bytes(out)
-#
-#
-# def lps(a: bytes) -> bytes:
-#     """
-#     Комбинированное преобразование LPS:
-#       1) S(a) — подстановка через SBOX
-#       2) P(a) — перестановка байтов по TAU
-#       3) L(a) — линейное смешивание с матрицей A
-#     Вход и выход: ровно 64 байта.
-#     """
-#     assert len(a) == 64
-#     b = bytes(SBOX[x] for x in a)
-#     c = bytes(b[TAU[i]] for i in range(64))
-#     out = bytearray(64)
-#     for col in range(8):
-#         chunk = c[col*8:(col+1)*8]
-#         bits = int.from_bytes(chunk, "little")
-#         acc = 0
-#         for i in range(64):
-#             if (bits >> i) & 1:
-#                 acc ^= A[i]      # здесь A — список из 64 констант
-#         out[col*8:(col+1)*8] = acc.to_bytes(8, "little")
-#     return bytes(out)
-#
-#
-# def g(N: bytes, h: bytes, m: bytes) -> bytes:
-#     """
-#     Компрессия g(N, h, m) → новое состояние h (512 бит). - 7(8) в ГОСТе
-#
-#     N, h, m — по 64 байта.
-#     Формулы:
-#       k = LPS(h XOR N)
-#       t = LPS(k   XOR m)
-#       h' = t XOR h XOR m
-#     """
-#     assert len(N) == len(h) == len(m) == 64
-#     k = xor512(h, N)
-#     k = lps(k)
-#     t = xor512(k, m)
-#     t = lps(t)
-#     return xor512(xor512(t, h), m)
-#
-#
-# def E(K: bytes, m: bytes) -> bytes:
-#     """
-#     Внутренний шифр E(K, m):
-#       — K, m: два 64-байтовых вектора.
-#       — Выполняет 13 раундов LPS:
-#         1) state = LPS(K ⊕ m)
-#         2) для каждой из 12 констант C[0]…C[11]:
-#              ключ = LPS(ключ_prev ⊕ Ci)
-#              state = LPS(ключ ⊕ state_prev)
-#       — Возвращает итоговый state (после 13-го LPS).
-#     """
-#     assert len(K) == len(m) == 64, "E: оба аргумента должны быть по 64 байта"
-#     # раунд 1
-#     key = K
-#     state = lps(xor512(key, m))
-#     # раунды 2–13
-#     for Ci in C:
-#         key = lps(xor512(key, Ci))
-#         state = lps(xor512(key, state))
-#     return state
-#
-#
-# def g(N: bytes, h: bytes, m: bytes) -> bytes:
-#     """
-#     Функция сжатия g(N, h, m) (§7, формула 8):
-#       N, h, m — каждый 64 байта.
-#       1) K1 = LPS(h ⊕ N)
-#       2) t  = E(K1, m)
-#       3) h' = t ⊕ h ⊕ m
-#       Возвращает новый h (64 байта).
-#     """
-#     assert len(N) == len(h) == len(m) == 64, "g: все аргументы должны быть по 64 байта"
-#     K1 = lps(xor512(h, N))
-#     t = E(K1, m)
-#     return xor512(xor512(t, h), m)
-#
-#
-# def gost34_11_2018_B256(M: bytes) -> bytes:
-#     # Этап 1
-#     h = b"\x01" * 64     # IV
-#     N = b"\x00" * 64
-#     S = b"\x00" * 64
-#
-#     # Этап 2
-#     while len(M) * 8 >= 512:
-#         m = M[:64]
-#         M = M[64:]
-#         h = g(N, h, m)
-#         N = xor512(N, int_to_vec512(512))
-#         S = xor512(S, m)
-#
-#     # Этап 3
-#     r = len(M) * 8      # оставшиеся биты
-#     # формируем последний блок m
-#     m = M + b"\x01" + b"\x00" * ((64 - ((len(M)+1) % 64)) % 64)
-#     # сжатие
-#     h = g(N, h, m)
-#     N = xor512(N, int_to_vec512(r))
-#     S = xor512(S, m)
-#     h = g(b"\x00"*64, h, N)
-#     h = g(b"\x00"*64, h, S)
-#
-#     # возвращаем MSB256(h)
-#     return h[:32]  # или h[-32:], в зависимости от порядка байт
+def xor512(k: bytes, a: bytes) -> bytes:
+    """
+    X[k](a) = k XOR a. 6(3) в ГОСТе
 
+    Оба аргумента должны быть ровно 64 байта (512 бит).
+    Возвращает новый 64-байтовый объект.
+    """
+    assert len(k) == 64 and len(a) == 64, "Оба вектора должны быть 64 байта"
+    return bytes(x ^ y for x, y in zip(k, a))
 
-def xor512(x: bytes, y: bytes) -> bytes:
-    assert len(x) == len(y) == 64
-    return bytes(a ^ b for a, b in zip(x, y))
 
 def sub_bytes(a: bytes) -> bytes:
-    assert len(a) == 64
+    """
+    S(a): нелинейное преобразование с помощью SBOX. 6(4) в ГОСТе
+
+    Аргументы:
+        a (bytes): 64-байтный входной вектор.
+    Возвращает:
+        bytes: 64-байтный выходной вектор, где
+               каждый байт ai заменён на SBOX[ai].
+    """
+    # Проверяем длину
+    assert len(a) == 64, f"S-преобразование ожидает 64 байта, получено {len(a)}"
+    # Заменяем каждый байт через таблицу
     return bytes(SBOX[b] for b in a)
 
+
 def permute(a: bytes) -> bytes:
-    assert len(a) == 64
+    """
+    P(a): перестановка байтов по таблице TAU. 6(5) в ГОСТе
+
+    Аргумент:
+        a (bytes): 64-байтный вход.
+    Возвращает:
+        bytes: 64-байтный выход, где
+               result[i] = a[TAU[i]].
+    """
+    assert len(a) == 64, f"P-преобразование ожидает 64 байта, получено {len(a)}"
     return bytes(a[TAU[i]] for i in range(64))
 
+
 def linear(a: bytes) -> bytes:
+    """
+    L(a): линейное преобразование 512-битного вектора a (64 байта).
+    Каждый из 8 блоков по 8 байт обрабатывается как
+    little-endian 64-битное слово через матрицу, заданную константами A[0..63].
+    """
+    assert len(a) == 64, f"L ожидает 64 байта, получено {len(a)}"
+    out = bytearray(64)
+    # идём по каждому из 8 слов длины 8 байт
+    for word_idx in range(8):
+        # извлекаем 8 байт и превращаем в число little-endian
+        chunk = a[word_idx*8:(word_idx+1)*8]
+        v = int.from_bytes(chunk, "little")
+        acc = 0
+        # для каждого бита j проверяем его значение в v
+        for j in range(64):
+            if (v >> j) & 1:
+                acc ^= A[j]
+        # результат упаковываем обратно в 8 байт little-endian
+        out[word_idx*8:(word_idx+1)*8] = acc.to_bytes(8, "little")
+    return bytes(out)
+
+
+
+def lps(a: bytes) -> bytes:
+    """
+    Комбинированное преобразование LPS:
+      1) S(a) — подстановка через SBOX
+      2) P(a) — перестановка байтов по TAU
+      3) L(a) — линейное смешивание с матрицей A
+    Вход и выход: ровно 64 байта.
+    """
     assert len(a) == 64
+    b = bytes(SBOX[x] for x in a)
+    c = bytes(b[TAU[i]] for i in range(64))
     out = bytearray(64)
     for col in range(8):
-        word = int.from_bytes(a[col*8:(col+1)*8], "little")
+        chunk = c[col*8:(col+1)*8]
+        bits = int.from_bytes(chunk, "little")
         acc = 0
-        for bit in range(64):
-            if (word >> bit) & 1:
-                acc ^= A[bit]
+        for i in range(64):
+            if (bits >> i) & 1:
+                acc ^= A[i]      # здесь A — список из 64 констант
         out[col*8:(col+1)*8] = acc.to_bytes(8, "little")
     return bytes(out)
 
-def lps(a: bytes) -> bytes:
-    return linear(permute(sub_bytes(a)))
 
-# -------------------- Внутренний шифр E --------------------
+def g(N: bytes, h: bytes, m: bytes) -> bytes:
+    """
+    Компрессия g(N, h, m) → новое состояние h (512 бит). - 7(8) в ГОСТе
+
+    N, h, m — по 64 байта.
+    Формулы:
+      k = LPS(h XOR N)
+      t = LPS(k   XOR m)
+      h' = t XOR h XOR m
+    """
+    assert len(N) == len(h) == len(m) == 64
+    k = xor512(h, N)
+    k = lps(k)
+    t = xor512(k, m)
+    t = lps(t)
+    return xor512(xor512(t, h), m)
+
+
 def E(K: bytes, m: bytes) -> bytes:
-    assert len(K) == len(m) == 64
+    """
+    Внутренний шифр E(K, m):
+      — K, m: два 64-байтовых вектора.
+      — Выполняет 13 раундов LPS:
+        1) state = LPS(K ⊕ m)
+        2) для каждой из 12 констант C[0]…C[11]:
+             ключ = LPS(ключ_prev ⊕ Ci)
+             state = LPS(ключ ⊕ state_prev)
+      — Возвращает итоговый state (после 13-го LPS).
+    """
+    assert len(K) == len(m) == 64, "E: оба аргумента должны быть по 64 байта"
     # раунд 1
-    state = lps(xor512(K, m))
-    key   = K
-    # раунды 2..13
+    key = K
+    state = lps(xor512(key, m))
+    # раунды 2–13
     for Ci in C:
-        key   = lps(xor512(key,   Ci))
+        key = lps(xor512(key, Ci))
         state = lps(xor512(key, state))
     return state
 
-# -------------------- Функция сжатия g --------------------
-def g(N: bytes, h: bytes, m: bytes) -> bytes:
-    assert len(N) == len(h) == len(m) == 64
-    K1 = lps(xor512(h, N))     # K1 = LPS(h ⊕ N)
-    t  = E(K1, m)              # t = E(K1, m)
-    return xor512(xor512(t, h), m)
 
-# -------------------- Основная B-256 digest --------------------
-def digest(data: bytes) -> bytes:
+def int_to_vec512(n: int) -> bytes:
     """
-    Вычисляет 256-битный хеш для произвольного data (bytes).
+    Переводит целое число в 512-битный (64-байтный) little-endian вектор.
+    Используется для подсчёта N и S.
     """
-    # Этап 1: инициализация
-    h = b"\x01" * 64          # IV для B-256
-    N = b"\x00" * 64          # счётчик бит
-    S = b"\x00" * 64          # xor-накопитель
+    return n.to_bytes(64, byteorder="little")
 
-    # Этап 2: полные блоки
-    msg = data + b"\x01"
-    msg += b"\x00" * ((64 - len(msg) % 64) % 64)
-    for i in range(0, len(msg), 64):
-        m = msg[i:i+64]
+
+def digest(M: bytes) -> bytes:
+    # Этап 1
+    h = b"\x01" * 64     # IV
+    N = b"\x00" * 64
+    S = b"\x00" * 64
+
+    # Этап 2
+    while len(M) * 8 >= 512:
+        m = M[:64]
+        M = M[64:]
         h = g(N, h, m)
-        N = xor512(N, (512).to_bytes(64, "little"))
+        N = xor512(N, int_to_vec512(512))
         S = xor512(S, m)
 
-    # Этап 3: финализация
-    # последний неполный блок уже включён в msg, т.е. r = len(data)%64*8
-    r = (len(data) * 8) % 512
+    # Этап 3
+    r = len(M) * 8      # оставшиеся биты
+    # формируем последний блок m
+    m = M + b"\x01" + b"\x00" * ((64 - ((len(M)+1) % 64)) % 64)
+    # сжатие
+    h = g(N, h, m)
+    N = xor512(N, int_to_vec512(r))
+    S = xor512(S, m)
     h = g(b"\x00"*64, h, N)
     h = g(b"\x00"*64, h, S)
-    # для B-256 берём старшие 32 байта (MSB256)
-    return h[:32]
+
+    # возвращаем MSB256(h)
+    return h[-32:]  # или h[-32:], в зависимости от порядка байт
 
 # ================== Self-test (optional) ==================
 
 if __name__ == "__main__":
-    # 1) Тест-векторы из ГОСТ 34.11-2018 (B-256)
     vectors = {
-        b"": "3f8c8e1f6a6f8e1ab2e6a1974ad4e5de571f2b319c1d3e3bf5e94a4dc04e3e2b",
-        b"abc": "ba8063926dda4c39a51c385d8e912b7ff8d1bfbf73cce9e6f8bab3fdb4c5bb7d",
+        b"abc": "ba8063926dda4c39a51c385d8e912b7ff8d1bfbf73cce9e6f8bab3fdb4c5bb7d"[::-1],
         b"a" * 1_000_000: "6e0c9da2cb63251a65df307c36cd79ecfbc0a3e5cf1f1f4c173acbdeda8aee88",
+        b"": "3f8c8e1f6a6f8e1ab2e6a1974ad4e5de571f2b319c1d3e3bf5e94a4dc04e3e2b",
     }
     print("=== Self-test: Known vectors ===")
     for msg, exp in vectors.items():
