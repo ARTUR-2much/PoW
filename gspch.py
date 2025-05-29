@@ -3,21 +3,18 @@
 
 from streebog import digest
 
+# gspch.py
 class PRNG:
-    """
-    PRNG на базе h_i = H(h0 || BE64(counter)),
-    выдаёт get_bytes(), get_int() и вспомогательные методы без повторного использования битов.
-    """
-    def __init__(self, seed: bytes):
-        """
-        :param seed: h0 — 32- или 64-байтовый вектор (результат digest(ФИО)).
-        """
-        assert len(seed) in (32, 64), \
-            f"Seed must be 32 or 64 bytes, got {len(seed)}"
-        # приводим seed к 64 байтам (для Стрибога-256 seed=32, pad to 64)
+    def __init__(self, seed: bytes, *, debug: bool = True):
+        assert len(seed) in (32, 64)
         self.h0 = seed.ljust(64, b"\x00")
         self.counter = 1
         self.buffer = b""
+
+        if debug:
+            print(f"[PRNG] seed = {seed!r}")
+            print(f"[PRNG] h0 = {self.h0.hex()[:64]}…")
+
 
     def _refill(self):
         """

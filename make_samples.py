@@ -5,7 +5,7 @@ from gspch import PRNG
 import binascii
 
 
-FIO = "Мхитарян Артур Месропович"
+FIO = "heheywassapy"
 seed = digest(FIO.encode("utf-8"))
 prng = PRNG(seed)
 

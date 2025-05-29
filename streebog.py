@@ -147,8 +147,6 @@ C = [hexdec("".join(s)) for s in (
         "faf417d5d9b21b9948bc924af11bd720",
     ),
 )]
-for i in C:
-    print(i)
 
 
 def xor512(k: bytes, a: bytes) -> bytes:
