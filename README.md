@@ -1,16 +1,11 @@
-# Proof-of-Work lav Antonio 
 
-# Практическая работа: Proof-of-Work-блокчейн  
+# Project: Proof-of-Work-блокчейн  
 
-## Задание (дословно из методички)
+## Goals:
 
-1. Реализовать хэш-функцию ГОСТ 34.11-2018 (Стрибог-256).  
-2. Построить ГПСЧ: h₀ = H(«ФИО», 512 бит), hᵢ = H(h₀∥i).  
-3. Реализовать подпись Шнорра «key-prefixed» (параметры p,q,g из примера А.3 ГОСТ 34.10-94).  
-4. Сгенерировать 5 транзакций (~200 Б), одну — с ФИО; подписать их Шнорром.  
-5. Вычислить Merkle-root для этих 5 транзакций.  
-6. Сформировать заголовок блока и подобрать nonce, чтобы первые 5 бит SHA-256(заголовка) = 0.  
-7. Подготовить отчёт с описанием алгоритмов, скринами вывода и выводами.
-
-## Структура проекта
-
+1. To make the hash-function GOST R 34.11-2018 (Streebog-256) 
+2. Compute randomizer with h0 = H(Full name, 512 bits), hi = H(h0||i)
+3. Implement the key-prefixed Schnorr signature ( use parameters p, q, g from example A.3 of GOST R 34.10-94)  
+4. To generate 5 200 bits each transactions with one transaction containing Full Name; sigh all five transactions with Schnorr signature 
+5. Compute the Merkle root for those 5 made signed transactions by any realization at 2.3 in practice's paper
+6. To construct a block header and find a nonce such that the first 5 bits of Streebog-256 ( block_header ) are all equall to zero  
